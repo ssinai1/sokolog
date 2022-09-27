@@ -90,3 +90,13 @@ insert_ordered(X, [Y|Ys], [X, Y|Ys]):-
     X @=< Y, !.
 insert_ordered(X, [Y|Ys], [Y|Ordered]):-
     insert_ordered(X, Ys, Ordered).
+
+
+% P is the shorter list or P2
+shortest(P1, P2, P):-
+    length(P1, L1),
+    length(P2, L2),
+    (   L1 < L2
+        ->  P = P1
+        ;   P = P2
+    ).

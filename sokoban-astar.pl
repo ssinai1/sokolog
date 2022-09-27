@@ -4,7 +4,7 @@
 
 :- ['level-import.pl'].
 :- ['sokoban-common.pl'].
-:- ['astar.pl'].
+:- ['sokoban-astar-common.pl'].
 
 
 % A solution with the shortest number of one-step box moves
@@ -20,44 +20,6 @@ solution(FilePath, Plan, NumMoves) :-
     length(Plan1, NumMoves),
     write('Plan (standard rule): '), write(Plan), nl,
     write('Number of moves: '), write(NumMoves), nl.
-
-
-movement(Xs, Ys, (X, Dir, Y)) :-
-    select(X, Xs, Xs1),
-    \+ member(X, Ys),
-    select(Y, Ys, _),
-    \+ member(Y, Xs1),
-    direction(Dir),
-    nexts_to(X, Dir, Y).
-
-
-states_to_plan([_], []).
-
-states_to_plan([(_, BoxLocs), (_, NextBoxLocs)|R], [M|Ms]) :-
-    movement(BoxLocs, NextBoxLocs, M),
-    states_to_plan([(_, NextBoxLocs)|R], Ms), !.
-
-
-simplify_plan(Ps, Ms) :-
-    simplify_plan(Ps, [], Ms).
-
-
-simplify_plan([], Ms, Ms1) :-
-    reverse(Ms, Ms1).
-
-simplify_plan([P|Ps], Ms, Qs) :-
-    simplify_front([P|Ps], M, Rs),
-    simplify_plan(Rs, [M|Ms], Qs).
-
-
-simplify_front([], none, []).
-
-simplify_front([(X, Dir, Y)], (X, Dir, Y), []).
-
-simplify_front([(X, Dir, Y), (Y1, Dir1, Z)|Ps], M, Rs) :-
-    ((Y \== Y1; Dir \== Dir1) ->
-        M = (X, Dir, Y), Rs = [(Y1, Dir1, Z)|Ps]
-    ; simplify_front([(X, Dir, Z)|Ps], M, Rs)).
 
 
 puzzle_safe_state(_).
@@ -85,43 +47,6 @@ next_state((SokobanLoc, BoxLocs)#G0, (NextSokobanLoc, NextBoxLocs)#G) :-
     insert_ordered(NewLoc, BoxLocs1, NextBoxLocs),
     canonical_sokoban(BoxLoc, NextSokobanLoc, NextBoxLocs),
     G is G0 + 1.
-
-
-% If the two states are the same, then the sokoban position is the same
-canonical_sokoban(SokobanLoc, NextSokobanLoc, BoxLocs) :-
-    (select(BoxLoc, BoxLocs, BoxLocs1),
-            direction(Dir),
-            next_to(NextSokobanLoc, Dir, BoxLoc),
-            \+ member(NextSokobanLoc, BoxLocs1),
-            connected(SokobanLoc, NextSokobanLoc, BoxLocs) ->
-        true
-    ; NextSokobanLoc = SokobanLoc).
-
-
-sokoban_next_loc(Loc#G0, NextLoc#G) :-
-    next_to(Loc, _, NextLoc),
-    G is G0 + 1.
-
-
-sokoban_goal(DestLoc, DestLoc).
-
-
-sokoban_safe_loc(BoxLocs, Loc) :-
-    \+ member(Loc, BoxLocs).
-
-
-% Manhattan distance heuristics
-h_sokoban(DestLoc, Loc, H) :-
-    coord(Loc, X1, Y1),
-    coord(DestLoc, X2, Y2),
-    H is abs(X2 - X1) + abs(Y2 - Y1).
-
-
-connected(StartLoc, DestLoc, BoxLocs) :-
-    SafeState1 =.. [sokoban_safe_loc, BoxLocs],
-    Goal1 =.. [sokoban_goal, DestLoc],
-    HFunction1 =.. [h_sokoban, DestLoc],
-    astar_connected(StartLoc, sokoban_next_loc, SafeState1, HFunction1, Goal1).
 
 
 % Trivial lower bound assignment cost estimation heuristics

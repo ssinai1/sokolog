@@ -13,6 +13,11 @@ In command line, run one of the following:
 $ swipl sokoban-astar.pl
 ```
 
+* For A* search based reverse solver:
+```
+$ swipl sokoban-astar-reverse.pl
+```
+
 * For tabled solver:
 ```
 $ swipl sokoban-tabled.pl

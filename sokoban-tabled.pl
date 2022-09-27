@@ -29,15 +29,6 @@ solve_tabled(_, BoxLocs, []):-
 solve_tabled(SokobanLoc, BoxLocs, [Move|Moves]):-
     next_state((SokobanLoc, BoxLocs), (NextSokobanLoc, NextBoxLocs), Move),
     solve_tabled(NextSokobanLoc, NextBoxLocs, Moves).
-    
-
-shortest(P1, P2, P):-
-    length(P1, L1),
-    length(P2, L2),
-    (   L1 < L2
-        ->  P = P1
-        ;   P = P2
-    ).
 
 
 next_state((SokobanLoc, BoxLocs), (NextSokobanLoc, NextBoxLocs), (BoxLoc, Dir, DestLoc)) :-
