@@ -13,7 +13,7 @@ solution(FilePath, Plan, NumMoves) :-
     load_level(FilePath),
     setof(X, X^box(X), BoxLocs),
     sokoban(SokobanLoc),
-    canonical_sokoban(NewSokobanLoc, SokobanLoc, BoxLocs),
+    canonical_sokoban(SokobanLoc, NewSokobanLoc, BoxLocs),
     astar_path((NewSokobanLoc, BoxLocs), P, next_state, puzzle_safe_state, h_puzzle2, puzzle_goal),
     states_to_plan(P, Plan1),
     simplify_plan(Plan1, Plan),
@@ -88,14 +88,14 @@ next_state((SokobanLoc, BoxLocs)#G0, (NextSokobanLoc, NextBoxLocs)#G) :-
 
 
 % If the two states are the same, then the sokoban position is the same
-canonical_sokoban(Loc, SokobanLoc, BoxLocs) :-
+canonical_sokoban(SokobanLoc, NextSokobanLoc, BoxLocs) :-
     (select(BoxLoc, BoxLocs, BoxLocs1),
             direction(Dir),
-            next_to(SokobanLoc, Dir, BoxLoc),
-            \+ member(SokobanLoc, BoxLocs1),
-            connected(Loc, SokobanLoc, BoxLocs) ->
+            next_to(NextSokobanLoc, Dir, BoxLoc),
+            \+ member(NextSokobanLoc, BoxLocs1),
+            connected(SokobanLoc, NextSokobanLoc, BoxLocs) ->
         true
-    ; SokobanLoc = Loc).
+    ; NextSokobanLoc = SokobanLoc).
 
 
 sokoban_next_loc(Loc#G0, NextLoc#G) :-

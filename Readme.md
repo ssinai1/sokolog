@@ -1,6 +1,6 @@
-# Sokoban solver - warehouse work with prolog
+# Sokoban solver - warehouse work with Prolog
 
-This project is a by-product of learning prolog.
+This project is a by-product of learning Prolog.
 
 Tested with SWI-Prolog 8.4.2.
 
@@ -8,7 +8,7 @@ Tested with SWI-Prolog 8.4.2.
 
 In command line, run one of the following:
 
-* For A* search:
+* For A* search based solver:
 ```
 $ swipl sokoban-astar.pl
 ```

@@ -13,7 +13,7 @@ solution(FilePath, Plan, NumMoves):-
     load_level(FilePath),
     setof(X, X^box(X), BoxLocs),
     sokoban(SokobanLoc),
-    canonical_sokoban(NewSokobanLoc, SokobanLoc, BoxLocs),
+    canonical_sokoban(SokobanLoc, NewSokobanLoc, BoxLocs),
     solve_tabled(NewSokobanLoc, BoxLocs, Plan),
     length(Plan, NumMoves),
     write('Plan (rook rule): '), write(Plan), nl,
