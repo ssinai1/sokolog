@@ -27,7 +27,20 @@ Then run the query, such as
 ```
 ?- solution('levels/example-01.lvl', Plan, N). 
 ```
+Or use the simple http GUI:
+```
+$ swipl server.pl
+```
+```
+?- start_svr(5000, 'levels/example-03.lvl'). 
+```
+Then connect with a browser - http://localhost:5000/sokoban_gui
+![screenshot](gui.png)
 
+Stop the server with
+```
+?- stop_svr(5000). 
+```
 ## Levels
 
 Board symbols:

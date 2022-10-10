@@ -3,13 +3,27 @@
 :- use_module(library('dcg/basics')).
 
 
+board_symbol(wall, '#').
+board_symbol(sokoban, '@').
+board_symbol(sokoban, '+').
+board_symbol(box, '$').
+board_symbol(box, '*').
+board_symbol(storage, '.').
+board_symbol(storage, '*').
+board_symbol(storage, '+').
+board_symbol(empty_space, ' ').
+
+
 % Load a level from file
 load_level(FilePath) :-
+    load_level(FilePath, _).
+
+load_level(FilePath, Lines) :-
     clear_level,
-    lines_from_file(FilePath, Lines1),
-    maplist(replace_front_back, Lines1, Lines),
-    add_tops(Lines),
-    add_rights_others(Lines).
+    lines_from_file(FilePath, Lines),
+    maplist(replace_front_back, Lines, Lines1),
+    add_tops(Lines1),
+    add_rights_others(Lines1).
 
 
 % Loading lines of characters from file
@@ -39,17 +53,19 @@ add_rights_others(Ls) :-
 
 
 add_rights1(Cs, Y) :-
-    foldl(add_right(Y), Cs, 0-'#', _).
+    board_symbol(wall, W),
+    foldl(add_right(Y), Cs, 0-W, _).
 
 
 add_right(Y, C2, X-C1, X1-C2) :-
     X1 is X + 1,
-    ((is_floor(C1), is_floor(C2)) ->
-        X1 is X + 1,
+    (   (\+ board_symbol(wall, C1), \+ board_symbol(wall, C2))
+    ->  X1 is X + 1,
         cxry(X, Y, P),
         cxry(X1, Y, Q),   
         assertz(right(P, Q))
-    ; true).
+    ;   true
+    ).
 
 
 add_others(Cs, Y) :-
@@ -60,16 +76,39 @@ add_others(Cs, Y) :-
 
 add_other(Y, X, C) :-
     cxry(X, Y, P),
-    (is_floor(C) ->
-        assertz(coord(P,X,Y))
-    ; true),
+    (   \+ board_symbol(wall, C)
+    ->  assertz(coord(P,X,Y))
+    ;   true
+    ),
     add_items(C, P).
 
 
-items(['@'-[sokoban], '$'-[box], '.'-[storage], '+'-[storage, sokoban], '*'-[storage, box]]).
+atom_symbols(AtomSyms) :-
+    setof(Atom, Sym^board_symbol(Atom, Sym), Atoms),
+    findall(Atom-Syms,
+        (member(Atom, Atoms),
+        findall(Sym,
+            board_symbol(Atom, Sym),
+            Syms
+        )),
+        AtomSyms
+    ).
+
+
+symbol_atoms(SymAtoms) :-
+    setof(Sym, Atom^board_symbol(Atom, Sym), Syms),
+    findall(Sym-Atoms,
+        (member(Sym, Syms),
+        findall(Atom,
+            board_symbol(Atom, Sym),
+            Atoms
+        )),
+        SymAtoms
+    ).
+
 
 add_items(I, Loc) :-
-    items(Is),
+    symbol_atoms(Is),
     foreach(member(I-L, Is),
         foreach(member(A, L), add_item1(A, Loc))
     ).
@@ -94,7 +133,7 @@ add_tops1(C2s, Y-C1s, Y1-C2s) :-
 
 
 add_top(Y, X, C1, C2) :-
-    ((is_floor(C1), is_floor(C2)) ->
+    ((\+ board_symbol(wall, C1), \+ board_symbol(wall, C2)) ->
         Y1 is Y + 1,
         cxry(X, Y, P),
         cxry(X, Y1, Q),   
@@ -112,11 +151,9 @@ replace_front_back(R, T) :-
 
 replace_front([], []).
 
-replace_front([C|R], ['#'|T]) :-
-    (C \== '#' -> replace_front(R, T); T = R).
-
-
-is_floor(C) :- C \== '#'.
+replace_front([C|R], [W|T]) :-
+    board_symbol(wall, W),
+    (C == W -> T = R; replace_front(R, T)).
 
 
 cxry(X, Y, P) :-
@@ -137,4 +174,6 @@ clear_level :-
     retractall(coord(_,_,_)),
     retractall(sokoban(_)),
     retractall(box(_)),
-    retractall(storage(_)).
+    retractall(storage(_)),
+    retractall(empty_space(_)),
+    retractall(wall(_)).

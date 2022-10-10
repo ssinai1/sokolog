@@ -33,20 +33,22 @@ simplify_front([], none, []).
 simplify_front([(X, Dir, Y)], (X, Dir, Y), []).
 
 simplify_front([(X, Dir, Y), (Y1, Dir1, Z)|Ps], M, Rs) :-
-    ((Y \== Y1; Dir \== Dir1) ->
-        M = (X, Dir, Y), Rs = [(Y1, Dir1, Z)|Ps]
-    ; simplify_front([(X, Dir, Z)|Ps], M, Rs)).
+    (   (Y \== Y1; Dir \== Dir1)
+    ->  M = (X, Dir, Y), Rs = [(Y1, Dir1, Z)|Ps]
+    ;   simplify_front([(X, Dir, Z)|Ps], M, Rs)
+    ).
 
 
 % If the two states are the same, then the sokoban position is the same
 canonical_sokoban(SokobanLoc, NextSokobanLoc, BoxLocs) :-
-    (select(BoxLoc, BoxLocs, BoxLocs1),
-            direction(Dir),
-            next_to(NextSokobanLoc, Dir, BoxLoc),
-            \+ member(NextSokobanLoc, BoxLocs1),
-            connected(SokobanLoc, NextSokobanLoc, BoxLocs) ->
-        true
-    ; NextSokobanLoc = SokobanLoc).
+    (   (select(BoxLoc, BoxLocs, BoxLocs1),
+        direction(Dir),
+        next_to(NextSokobanLoc, Dir, BoxLoc),
+        \+ member(NextSokobanLoc, BoxLocs1),
+        connected(SokobanLoc, NextSokobanLoc, BoxLocs))
+    ->  true
+    ;   NextSokobanLoc = SokobanLoc
+    ).
 
 
 sokoban_next_loc(Loc#G0, NextLoc#G) :-
@@ -74,3 +76,11 @@ connected(StartLoc, DestLoc, BoxLocs) :-
     HFunction1 =.. [h_sokoban, DestLoc],
     astar_connected(StartLoc, sokoban_next_loc, SafeState1, HFunction1, Goal1).
 
+
+connected_N(StartLoc, DestLoc, BoxLocs, N) :-
+    SafeState1 =.. [sokoban_safe_loc, BoxLocs],
+    Goal1 =.. [sokoban_goal, DestLoc],
+    HFunction1 =.. [h_sokoban, DestLoc],
+    astar_path(StartLoc, Path, sokoban_next_loc, SafeState1, HFunction1, Goal1),
+    length(Path, N1),
+    N is N1 - 1.

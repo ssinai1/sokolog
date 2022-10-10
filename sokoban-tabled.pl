@@ -45,15 +45,17 @@ next_state((SokobanLoc, BoxLocs), (NextSokobanLoc, NextBoxLocs), (BoxLoc, Dir, D
 
 
 canonical_sokoban(SokobanLoc, NextSokobanLoc, BoxLocs) :-
-    ((select(BoxLoc, BoxLocs, BoxLocs1),
-            direction(Dir),
-            next_to(NextSokobanLoc, Dir, BoxLoc),
-            \+ member(NextSokobanLoc, BoxLocs1),
-            (SokobanLoc @< NextSokobanLoc ->
-                connected(SokobanLoc, NextSokobanLoc, BoxLocs)
-            ; connected(NextSokobanLoc, SokobanLoc, BoxLocs))) ->
-        true
-    ; NextSokobanLoc = SokobanLoc).
+    (   (select(BoxLoc, BoxLocs, BoxLocs1),
+        direction(Dir),
+        next_to(NextSokobanLoc, Dir, BoxLoc),
+        \+ member(NextSokobanLoc, BoxLocs1),
+        (   SokobanLoc @< NextSokobanLoc
+        ->
+            connected(SokobanLoc, NextSokobanLoc, BoxLocs)
+        ;   connected(NextSokobanLoc, SokobanLoc, BoxLocs)
+        ))
+    ->  true
+    ;   NextSokobanLoc = SokobanLoc).
 
 
 % Finding path on the board

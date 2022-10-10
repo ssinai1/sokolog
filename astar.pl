@@ -20,7 +20,7 @@ astar_solve(StartNode, (Node#FromNode, R), NextNode, SafeNode, HFunction, Goal) 
     astar_search(F#StartNode-0#none, RestOpen, Visited1, Node#_#_#FromNode, R, NextNode, SafeNode, HFunction, Goal).
 
 
-astar_reconstruct_path(Node-_#_#none, _, P, [Node|P]).
+astar_reconstruct_path(Node-_#_#none, _, P, [Node|P]) :- !.
 
 astar_reconstruct_path(Node-_#_#FromNode, Visited, S, FullPath) :-
     del_assoc(FromNode, Visited, _#_#P, Visited1),
@@ -48,23 +48,23 @@ expand(Node_G0, NextNode, SafeNode, Neighbor_Gs) :-
 process_neighbors([], _, _, Open, Visited, Open, Visited).
 
 process_neighbors([Node#G|R], FromNode, HFunction, Open, Visited, NewOpen, NewVisited) :-
-    (get_assoc(Node,Visited,G0#F0#_) ->
-        process_visited(Node#G, FromNode, HFunction, G0#F0, Open, Visited, NewOpen1, NewVisited1)
-    ; process_unvisited(Node#G, FromNode, HFunction, Open, Visited, NewOpen1, NewVisited1)
+    (   get_assoc(Node,Visited,G0#F0#_)
+    ->  process_visited(Node#G, FromNode, HFunction, G0#F0, Open, Visited, NewOpen1, NewVisited1)
+    ;   process_unvisited(Node#G, FromNode, HFunction, Open, Visited, NewOpen1, NewVisited1)
     ),
     process_neighbors(R, FromNode, HFunction, NewOpen1, NewVisited1, NewOpen, NewVisited).
 
 
 process_visited(Node#G, FromNode, HFunction, G0#F0, Open, Visited, NewOpen1, NewVisited) :-
-    (G < G0 ->
-        f_score(HFunction, Node, G, F),
-        (del_assoc(F0#Node, Open, _, Open1) ->
-            true
-        ; Open1 = Open
+    (   G < G0
+    ->  f_score(HFunction, Node, G, F),
+        (   del_assoc(F0#Node, Open, _, Open1)
+        ->  true
+        ;   Open1 = Open
         ),
         put_assoc(F#Node, Open1, G#FromNode, NewOpen1),
         put_assoc(Node, Visited, G#F#FromNode, NewVisited)
-    ; NewOpen1 = Open,
+    ;   NewOpen1 = Open,
         NewVisited = Visited
     ).
 

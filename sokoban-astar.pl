@@ -1,25 +1,36 @@
 
 % Only transpose/2 was used
 :- use_module(library(clpfd)).
+:- use_module(library(predicate_options)).
 
 :- ['level-import.pl'].
 :- ['sokoban-common.pl'].
 :- ['sokoban-astar-common.pl'].
 
 
-% A solution with the shortest number of one-step box moves
+:- predicate_options(solution/4, 4, [minimize(atom)]).
+
+% A solution with the smallest number of box pushes
 solution(FilePath, Plan, NumMoves) :-
-    abolish_all_tables,
     load_level(FilePath),
+    solution(Plan, NumMoves, _, [minimize(box_pushes)]),
+    write('Plan (push optimal): '), write(Plan), nl,
+    write('Number of moves: '), write(NumMoves), nl.
+
+
+solution(Plan, NumMoves, PlanOneStep, Options) :-
+    (   option(minimize(sokoban_steps), Options, box_pushes)
+    ->  NextState = next_state_s
+    ;   NextState = next_state
+    ),
+    abolish_all_tables,
     setof(X, X^box(X), BoxLocs),
     sokoban(SokobanLoc),
     canonical_sokoban(SokobanLoc, NewSokobanLoc, BoxLocs),
-    astar_path((NewSokobanLoc, BoxLocs), P, next_state, puzzle_safe_state, h_puzzle2, puzzle_goal),
-    states_to_plan(P, Plan1),
-    simplify_plan(Plan1, Plan),
-    length(Plan1, NumMoves),
-    write('Plan (standard rule): '), write(Plan), nl,
-    write('Number of moves: '), write(NumMoves), nl.
+    astar_path((NewSokobanLoc, BoxLocs), P, NextState, puzzle_safe_state, h_puzzle2, puzzle_goal),
+    states_to_plan(P, PlanOneStep),
+    simplify_plan(PlanOneStep, Plan),
+    length(PlanOneStep, NumMoves).
 
 
 puzzle_safe_state(_).
@@ -37,6 +48,7 @@ h_puzzle2((_, BoxLocs), C) :-
     assignment_cost_LB(BoxLocs, C).
 
 
+% Edge weight is the number of box pushes (1)
 next_state((SokobanLoc, BoxLocs)#G0, (NextSokobanLoc, NextBoxLocs)#G) :-
     select(BoxLoc, BoxLocs, BoxLocs1),
     next_to(PushLoc, Dir, BoxLoc),
@@ -47,6 +59,18 @@ next_state((SokobanLoc, BoxLocs)#G0, (NextSokobanLoc, NextBoxLocs)#G) :-
     insert_ordered(NewLoc, BoxLocs1, NextBoxLocs),
     canonical_sokoban(BoxLoc, NextSokobanLoc, NextBoxLocs),
     G is G0 + 1.
+
+
+% Edge weight is the number of sokoban moves
+next_state_s((SokobanLoc, BoxLocs)#G0, (BoxLoc, NextBoxLocs)#G) :-
+    select(BoxLoc, BoxLocs, BoxLocs1),
+    next_to(PushLoc, Dir, BoxLoc),
+    \+ member(PushLoc, BoxLocs1),
+    next_to(BoxLoc, Dir, NewLoc),
+    safe_location(NewLoc, BoxLocs1),
+    insert_ordered(NewLoc, BoxLocs1, NextBoxLocs),
+    connected_N(SokobanLoc, PushLoc, BoxLocs, N),
+    G is G0 + N + 1.
 
 
 % Trivial lower bound assignment cost estimation heuristics
@@ -122,10 +146,10 @@ move_count(StartLoc, DestLoc, N) :-
     Goal1 =.. [sokoban_goal, DestLoc],
     NextLoc1 =.. [next_box_loc, []],
     HFunction1 =.. [h_sokoban, DestLoc],
-    (astar_path(StartLoc, Path, NextLoc1, SafeState1, HFunction1, Goal1) ->
-        length(Path, N1),
+    (   astar_path(StartLoc, Path, NextLoc1, SafeState1, HFunction1, Goal1)
+    ->  length(Path, N1),
         N is N1 - 1
-    ; max_moves(N)
+    ;   max_moves(N)
     ).
 
 
@@ -141,5 +165,7 @@ next_box_loc(BoxLocs, Loc#G0, NextLoc#G) :-
 
 safe_loc1(BoxLocs, Loc) :-
     \+ member(Loc, BoxLocs),
-    (\+ corner(Loc); storage(Loc)),
+    (   \+ corner(Loc)
+    ->  true
+    ;   storage(Loc)),
     not_wall_trap(Loc).

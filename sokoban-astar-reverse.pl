@@ -1,6 +1,7 @@
 
 % Only transpose/2 was used
 :- use_module(library(clpfd)).
+:- use_module(library(predicate_options)).
 
 :- ['level-import.pl'].
 :- ['sokoban-common.pl'].
@@ -9,9 +10,22 @@
 
 % TODO: unify duplicated code parts somehow
 
+:- predicate_options(solution/4, 4, [minimize(atom)]).
+
+
 solution(FilePath, Plan, NumMoves) :-
-    abolish_all_tables,
     load_level(FilePath),
+    solution(Plan, NumMoves, _, [minimize(box_pushes)]),
+    write('Plan (push optimal): '), write(Plan), nl,
+    write('Number of moves: '), write(NumMoves), nl.
+
+
+solution(Plan, NumMoves, PlanOneStep, Options) :-
+    (   option(minimize(sokoban_steps), Options, box_pushes)
+    ->  NextState = next_state_s
+    ;   NextState = next_state
+    ),
+    abolish_all_tables,
     storages_sorted(BoxLocs),
     % In general, we do not know what the allowed sokoban end positions are until we solve the puzzle
     sokoban_end_locations(BoxLocs, SokobanEndLocs),
@@ -19,18 +33,16 @@ solution(FilePath, Plan, NumMoves) :-
         Path,
         (
             member(SokobanLoc, SokobanEndLocs),
-            astar_path((SokobanLoc, BoxLocs), Path, next_state, puzzle_safe_state, h_puzzle2, puzzle_goal)
+            astar_path((SokobanLoc, BoxLocs), Path, NextState, puzzle_safe_state, h_puzzle2, puzzle_goal)
         ),
         Paths
     ),
     [PFirst|_] = Paths,
     foldl(shortest, Paths, PFirst, P1),
     reverse(P1, P),
-    states_to_plan(P, Plan1),
-    simplify_plan(Plan1, Plan),
-    length(Plan1, NumMoves),
-    write('Plan (standard rule): '), write(Plan), nl,
-    write('Number of moves: '), write(NumMoves), nl.
+    states_to_plan(P, PlanOneStep),
+    simplify_plan(PlanOneStep, Plan),
+    length(PlanOneStep, NumMoves).
 
 
 sokoban_end_locations(BoxLocs, SokobanEndLocs) :-
@@ -93,7 +105,7 @@ h_puzzle1((_, BoxLocs), Sum) :-
 h_puzzle2((_, BoxLocs), C) :-
     assignment_cost_LB(BoxLocs, C).
 
-
+% Edge weight is the number of box pushes (1)
 next_state((SokobanLoc, BoxLocs)#G0, (NextSokobanLoc, NextBoxLocs)#G) :-
     select(BoxLoc, BoxLocs, BoxLocs1),
     next_to(BoxLoc, Dir, PullLoc),
@@ -101,13 +113,30 @@ next_state((SokobanLoc, BoxLocs)#G0, (NextSokobanLoc, NextBoxLocs)#G) :-
     \+ member(PullLoc, BoxLocs1),
     \+ member(NewSokobanLoc1, BoxLocs1),
     insert_ordered(PullLoc, BoxLocs1, NextBoxLocs),
-    % The case of a dead end
-    ((next_to(NewSokobanLoc1, _, Loc), \+ member(Loc, BoxLocs)) ->
-        true
-    ; startlocs_sorted(NextBoxLocs)),
+    not_dead_end(NewSokobanLoc1, BoxLocs, NextBoxLocs),
     connected(SokobanLoc, PullLoc, BoxLocs),
     canonical_sokoban(NewSokobanLoc1, NextSokobanLoc, NextBoxLocs),
     G is G0 + 1.
+
+% Edge weight is the number of sokoban moves
+next_state_s((SokobanLoc, BoxLocs)#G0, (NextSokobanLoc, NextBoxLocs)#G) :-
+    select(BoxLoc, BoxLocs, BoxLocs1),
+    next_to(BoxLoc, Dir, PullLoc),
+    next_to(PullLoc, Dir, NextSokobanLoc),
+    \+ member(PullLoc, BoxLocs1),
+    \+ member(NextSokobanLoc, BoxLocs1),
+    insert_ordered(PullLoc, BoxLocs1, NextBoxLocs),
+    not_dead_end(NextSokobanLoc, BoxLocs, NextBoxLocs),
+    connected_N(SokobanLoc, PullLoc, BoxLocs, N),
+    G is G0 + N + 1.
+
+
+% The case of a dead end
+not_dead_end(NextSokobanLoc, BoxLocs, NextBoxLocs) :-
+    (   next_to(NextSokobanLoc, _, Loc), \+ member(Loc, BoxLocs)
+    ->  true
+    ;   startlocs_sorted(NextBoxLocs)
+    ).
 
 
 % Trivial lower bound assignment cost estimation heuristics
