@@ -22,7 +22,7 @@ storages_sorted(StorageLocs) :-
 
 
 safe_location(Loc, BoxLocs):-
-    \+ member(Loc, BoxLocs),
+    \+ memberchk(Loc, BoxLocs),
     (corner(Loc) -> storage(Loc); true),
     not_wall_trap(Loc),
     foreach(member(BoxLoc, BoxLocs), \+ stuck(BoxLoc, Loc)).

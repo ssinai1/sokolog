@@ -10,7 +10,7 @@
 
 :- predicate_options(solution/4, 4, [minimize(atom)]).
 
-% A solution with the smallest number of box pushes
+% A solution with the smallest number of box pushes - nodes are prioritised to target a shorter sokoban path
 solution(FilePath, Plan, NumMoves) :-
     load_level(FilePath),
     solution(Plan, NumMoves, _, [minimize(box_pushes)]),
@@ -27,7 +27,7 @@ solution(Plan, NumMoves, PlanOneStep, Options) :-
     setof(X, X^box(X), BoxLocs),
     sokoban(SokobanLoc),
     canonical_sokoban(SokobanLoc, NewSokobanLoc, BoxLocs),
-    astar_path((NewSokobanLoc, BoxLocs), P, NextState, puzzle_safe_state, h_puzzle2, puzzle_goal),
+    astar_path((NewSokobanLoc, BoxLocs)#SokobanLoc, P, NextState, puzzle_safe_state, h_puzzle2, f_score_puzzle, g_zero_puzzle, puzzle_goal),
     states_to_plan(P, PlanOneStep),
     simplify_plan(PlanOneStep, Plan),
     length(PlanOneStep, NumMoves).
@@ -49,28 +49,29 @@ h_puzzle2((_, BoxLocs), C) :-
 
 
 % Edge weight is the number of box pushes (1)
-next_state((SokobanLoc, BoxLocs)#G0, (NextSokobanLoc, NextBoxLocs)#G) :-
+next_state((_SokobanLoc, BoxLocs)#OrigSokobanLoc#(G0, N0), (NextSokobanLoc, NextBoxLocs)#BoxLoc#(G, N)) :-
     select(BoxLoc, BoxLocs, BoxLocs1),
     next_to(PushLoc, Dir, BoxLoc),
-    \+ member(PushLoc, BoxLocs1),
+    \+ memberchk(PushLoc, BoxLocs1),
     next_to(BoxLoc, Dir, NewLoc),
     safe_location(NewLoc, BoxLocs1),
-    connected(SokobanLoc, PushLoc, BoxLocs),
+    connected_N(OrigSokobanLoc, PushLoc, BoxLocs, N1),
     insert_ordered(NewLoc, BoxLocs1, NextBoxLocs),
     canonical_sokoban(BoxLoc, NextSokobanLoc, NextBoxLocs),
+    N is N0 + N1 + 1,
     G is G0 + 1.
 
 
 % Edge weight is the number of sokoban moves
-next_state_s((SokobanLoc, BoxLocs)#G0, (BoxLoc, NextBoxLocs)#G) :-
+next_state_s((SokobanLoc, BoxLocs)#Metadata#(G0, 0), (BoxLoc, NextBoxLocs)#Metadata#(G, 0)) :-
     select(BoxLoc, BoxLocs, BoxLocs1),
     next_to(PushLoc, Dir, BoxLoc),
-    \+ member(PushLoc, BoxLocs1),
+    \+ memberchk(PushLoc, BoxLocs1),
     next_to(BoxLoc, Dir, NewLoc),
     safe_location(NewLoc, BoxLocs1),
     insert_ordered(NewLoc, BoxLocs1, NextBoxLocs),
     connected_N(SokobanLoc, PushLoc, BoxLocs, N),
-    G is G0 + N + 1.
+    G is G0 + 1 + N.
 
 
 % Trivial lower bound assignment cost estimation heuristics
@@ -130,8 +131,6 @@ estimated_cost(Ls, Cost) :-
     Cost is SumR + SumC.
 
 
-:- table assignment_cost_LB/2.
-
 assignment_cost_LB(BoxLocs, Cost) :-
     storages_sorted(StorageLocs),
     boxes_costs(StorageLocs, BoxLocs, Ls),
@@ -146,7 +145,7 @@ move_count(StartLoc, DestLoc, N) :-
     Goal1 =.. [sokoban_goal, DestLoc],
     NextLoc1 =.. [next_box_loc, []],
     HFunction1 =.. [h_sokoban, DestLoc],
-    (   astar_path(StartLoc, Path, NextLoc1, SafeState1, HFunction1, Goal1)
+    (   astar_path(StartLoc#none, Path, NextLoc1, SafeState1, HFunction1, f_score, g_zero, Goal1)
     ->  length(Path, N1),
         N is N1 - 1
     ;   max_moves(N)
@@ -156,15 +155,15 @@ move_count(StartLoc, DestLoc, N) :-
 max_moves(1000000).
 
 
-next_box_loc(BoxLocs, Loc#G0, NextLoc#G) :-
+next_box_loc(BoxLocs, Loc#Metadata#G0, NextLoc#Metadata#G) :-
     direction(Dir),
     next_to(Loc, Dir, NextLoc),
-    \+ member(NextLoc, BoxLocs),
+    \+ memberchk(NextLoc, BoxLocs),
     G is G0 + 1.
 
 
 safe_loc1(BoxLocs, Loc) :-
-    \+ member(Loc, BoxLocs),
+    \+ memberchk(Loc, BoxLocs),
     (   \+ corner(Loc)
     ->  true
     ;   storage(Loc)),

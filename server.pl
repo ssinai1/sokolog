@@ -258,7 +258,7 @@ sokoban_path(StartLoc, DestLoc, BoxLocs, Path) :-
     SafeState1 =.. [sokoban_safe_loc, BoxLocs],
     Goal1 =.. [sokoban_goal, DestLoc],
     HFunction1 =.. [h_sokoban, DestLoc],
-    astar_path(StartLoc, Path, sokoban_next_loc, SafeState1, HFunction1, Goal1).
+    astar_path(StartLoc#none, Path, sokoban_next_loc, SafeState1, HFunction1, f_score, g_zero, Goal1).
 
 
 path_to_dirs([_], []) :- !.

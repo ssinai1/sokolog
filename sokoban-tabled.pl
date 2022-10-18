@@ -35,7 +35,7 @@ next_state((SokobanLoc, BoxLocs), (NextSokobanLoc, NextBoxLocs), (BoxLoc, Dir, D
     select(BoxLoc, BoxLocs, BoxLocs1),
     direction(Dir),
     next_to(PushLoc, Dir, BoxLoc),
-    \+ member(PushLoc, BoxLocs1),
+    \+ memberchk(PushLoc, BoxLocs1),
     next_to(BoxLoc, Dir, FirstDestLoc),
     safe_location(FirstDestLoc, BoxLocs1),
     connected(PushLoc, SokobanLoc, BoxLocs),
@@ -48,7 +48,7 @@ canonical_sokoban(SokobanLoc, NextSokobanLoc, BoxLocs) :-
     (   (select(BoxLoc, BoxLocs, BoxLocs1),
         direction(Dir),
         next_to(NextSokobanLoc, Dir, BoxLoc),
-        \+ member(NextSokobanLoc, BoxLocs1),
+        \+ memberchk(NextSokobanLoc, BoxLocs1),
         (   SokobanLoc @< NextSokobanLoc
         ->
             connected(SokobanLoc, NextSokobanLoc, BoxLocs)
@@ -66,7 +66,7 @@ connected(X, X, _).
 connected(X, Y, BoxLocs):-
     connected(X, Z, BoxLocs),
     next_to(Y, _, Z),
-    \+ member(Z, BoxLocs).
+    \+ memberchk(Z, BoxLocs).
 
 
 rook_movement(Loc, Loc, _, _).
